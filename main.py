@@ -1,6 +1,6 @@
 import pygame
 import sys
-from Question import Question
+from Button import Question, Report
 from Grid import Grid
 from Constants import SCREEN_RES, FPS
 
@@ -30,10 +30,18 @@ while True:
         grid.open()
     elif mode == "3":
         break
+    else:
+        message = Report("Wrong input. Try again.")
+        continue
 
     message = Question("Do you want to solve it? (Yes or No)")
     if message.state == "Yes":
         grid.solve()
+    elif message.state == "No":
+        continue
+    else:
+        message = Report("Wrong input.")
+        continue
 
     clock.tick(10)
 

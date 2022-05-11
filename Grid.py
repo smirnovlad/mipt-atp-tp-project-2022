@@ -3,8 +3,8 @@ import time
 from Cell import Cell
 from random import choice
 from Constants import WIDTH, HEIGHT, FPS, CELL_SIZE
-from Question import Question, Report
-
+from Button import Question, Report
+import os.path
 
 class Grid:
     collumn_count, row_count = WIDTH // CELL_SIZE, HEIGHT // CELL_SIZE
@@ -30,7 +30,7 @@ class Grid:
         left = self.get_cell(cell.x - 1, cell.y)
         candidates = (top, right, bottom, left)
         for cell in candidates:
-            if cell and not cell.used:
+            if cell and not cell.is_used:
                 neighbors.append(cell)
         return choice(neighbors) if neighbors else False
 
@@ -67,7 +67,7 @@ class Grid:
         stack = []
         color = 40
         colors = [color]
-        if not start_cell.used:
+        if not start_cell.is_used:
             self.generating_dfs(start_cell, color, stack, colors)
             time.sleep(50 / FPS)
             start_cell.draw_cell(False)
@@ -77,9 +77,11 @@ class Grid:
                 message = Question("Enter file name: ")
                 file_name = message.state
                 self.save_maze(file_name)
+            elif message.state != "No":
+                message = Report("Wrong input.")
 
     def generating_dfs(self, cell, color, stack, colors):
-        cell.used = True
+        cell.is_used = True
         cell.draw_cell(True)
         pygame.display.flip()
         cell.draw_cell(False)
@@ -127,13 +129,13 @@ class Grid:
         second_cell = self.get_cell(x2 // CELL_SIZE, y2 // CELL_SIZE)
         
         for cell in self.grid_cells:
-            cell.used = False
+            cell.is_used = False
         stack = []
         self.dfs_to_solve(first_cell, second_cell, stack)
         pygame.display.flip()
 
     def dfs_to_solve(self, cell, finish_cell, stack):
-        cell.used = True
+        cell.is_used = True
         cell.draw_cell(True)
         pygame.display.flip()
         if cell == finish_cell:
@@ -141,7 +143,7 @@ class Grid:
         else:
             neighbors = self.get_neighbors(cell)
             for next_cell in neighbors:
-                if not next_cell.used:
+                if not next_cell.is_used:
                     time.sleep(2 / FPS)  # 10 / FPS
                     stack.append(cell)
                     return self.dfs_to_solve(next_cell, finish_cell, stack)
@@ -151,22 +153,49 @@ class Grid:
     def open(self):
         message = Question("Enter file name: ")
         file_name = message.state
-        self.open_maze(file_name)
-        self.draw()
-        pygame.display.flip()
+        if(os.path.exists(file_name)):
+            self.open_maze(file_name)
+            self.draw()
+            pygame.display.flip()
+        else:
+            message = Report("Wrong input. Try again.")
+            self.open()
 
     def open_maze(self, file_name):
         with open(file_name, "r") as fin:
             matrix = fin.readlines()
+            b = True
+            l = len(matrix[0]) - 1
             for i in range(len(matrix)):
-                for j in range(len(matrix[i])):
-                    y, x = i // 2, j // 2
-                    cell = self.get_cell(x, y)
-                    if matrix[i][j] == 'o':
-                        cell.walls['top'] = (matrix[i - 1][j] == 'w')
-                        cell.walls['right'] = (matrix[i][j + 1] == 'w')
-                        cell.walls['bottom'] = (matrix[i + 1][j] == 'w')
-                        cell.walls['left'] = (matrix[i][j - 1] == 'w')
+                if len(matrix[i]) - 1 != l:
+                    b = False
+                    break
+            if b:
+                for i in range (1, len(matrix), 2):
+                    for j in range(1, len(matrix[i]) - 1, 2):
+                        if matrix[i][j] != 'o':
+                            b = False
+                            break
+                        else:
+                            if ((matrix[i - 1][j] != 'w' and matrix[i - 1][j] != 'e')
+                                or (matrix[i][j + 1] != 'w' and matrix[i][j + 1] != 'e')
+                                or (matrix[i + 1][j] != 'w' and matrix[i + 1][j] != 'e')
+                                or (matrix[i][j - 1] != 'w' and matrix[i][j - 1] != 'e')):
+                                b = False
+                                break
+            if b:
+                for i in range(len(matrix)):
+                    for j in range(len(matrix[i])):
+                        y, x = i // 2, j // 2
+                        cell = self.get_cell(x, y)
+                        if matrix[i][j] == 'o':
+                            cell.walls['top'] = (matrix[i - 1][j] == 'w')
+                            cell.walls['right'] = (matrix[i][j + 1] == 'w')
+                            cell.walls['bottom'] = (matrix[i + 1][j] == 'w')
+                            cell.walls['left'] = (matrix[i][j - 1] == 'w')
+            else:
+                message = Report("Wrong input data in file. Try again.")
+                self.open()
 
     def save_maze(self, file_name):
         with open("binary_maze.txt", "w") as bin_fout:
